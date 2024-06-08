@@ -1,0 +1,187 @@
+/*
+ * write by Guoping Chen
+ * 8th, June, 2024
+ * add  L65 - L81： 	i2c@0 ...
+ * 
+ * add L180 - L183: 	enable usb3
+ *
+ *
+*/
+
+/include/ "system-conf.dtsi"
+/ {
+	/* 48MHz reference crystal */
+	ref48: ref48M {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <48000000>;
+	};
+};
+
+&sdhci1 {
+	u-boot,dm-pre-reloc;
+	non-removable;
+	disable-wp;
+	no-1-8-v; /* for 1.0 silicon */
+	cap-sd-highspeed;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-ddr50;
+	keep-power-in-suspend;
+	xlnx,mio_bank = <1>;
+	};
+
+
+
+&i2c0 {
+
+	/* for U31 TCA6416A   */
+	tca6416_u31: gpio@20 {	 /* address 0b100000 */
+		compatible = "ti,tca6416";
+		reg = <0x20>;
+		gpio-controller; /* interrupt not connected */
+		#gpio-cells = <2>;
+		/*
+		 * IRQ not connected
+		 * Lines:
+		 * 5 - IIC_MUX_RESET_B
+		 * 6 - GEM3_EXP_RESET_B
+		 * 11 - CLK_SPI_MUX_SEL0
+		 * 12 - CLK_SPI_MUX_SEL1
+		 * other - not connected
+		 */
+	};
+
+
+};
+
+&i2c1 {
+	i2c-mux@75 { /* tca9548apwr  rfsoc27dr @u35 address = 0b1110101; zcu111 @u26 address = 0b1110100= 0x74*/
+		compatible = "nxp,pca9548"; /* driver name is pca9548, chip name is tca9548 */
+ 		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x75>;
+		i2c@0 { /* i2c mw 74 0 1 */
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			/*
+			 * IIC_EEPROM 1kB memory which uses 256B blocks
+			 * where every block has different address.
+			 *    0 - 256B address 0x54
+			 * 256B - 512B address 0x55
+			 * 512B - 768B address 0x56
+			 * 768B - 1024B address 0x57
+			 */
+			eeprom: eeprom@54 { /* u88 */
+				compatible = "at,24c08";
+				reg = <0x54>;
+			};
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+			si5341: clock-generator@76 { /* SI5341 rfsoc27dr @u23 address = 11101 A1 A0 = 1110110 = 0x76; zcu111 @u46 address =0x76*/
+				compatible = "silabs,si5341";
+				reg = <0x76>;
+				#clock-cells = <2>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				clocks = <&ref48>;
+				clock-names = "xtal";
+				clock-output-names = "si5341";
+
+				si5341_0: out@0 {
+					/* refclk0 for PS-GT, used for DP */
+					reg = <0>;
+					always-on; /* assigned-clocks does not enable, so do it here */
+				};
+				si5341_2: out@2 {
+					/* refclk2 for PS-GT, used for USB3 */
+					reg = <2>;
+					always-on; /* assigned-clocks does not enable, so do it here */
+				};
+				si5341_3: out@3 {
+					/* refclk3 for PS-GT, used for SATA */
+					reg = <3>;
+					always-on; /* assigned-clocks does not enable, so do it here */
+				};
+				si5341_5: out@5 {
+					/* refclk5 PL CLK100 */
+					reg = <5>;
+					always-on; /* assigned-clocks does not enable, so do it here */
+				};
+				si5341_6: out@6 {
+					/* refclk6 PL CLK125 */
+					reg = <6>;
+					always-on; /* assigned-clocks does not enable, so do it here */
+				};
+				si5341_9: out@9 {
+					/* refclk9 used for PS_REF_CLK 33.3 MHz */
+					reg = <9>;
+					always-on; /* assigned-clocks does not enable, so do it here */
+				};
+			};
+
+		};
+
+
+		i2c@2 { /* rfsoc27dr@2; zcu111 @5 */
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+				sc18is603@2f { /* sc18is602 rfsoc27dr @u36 address = 101 A2 A1 A0 = 101111 = 0x2f; zcu111 @u93  address = 0x2f*/
+					compatible = "nxp,sc18is602b";
+					reg = <0x2f>;
+					#address-cells = <0x1>;
+					#size-cells = <0x0>;
+					lmxC@0 {
+							compatible = "ti,lmx2594";
+							reg = <0x0>;
+							spi-max-frequency = <400000>;
+							num_bytes = <4>;
+							};
+					lmk@1 {
+							compatible = "ti,lmk04208";
+							reg = <0x1>;
+							spi-max-frequency = <400000>;
+							num_bytes = <4>;
+							};
+					lmxB@2 {
+							compatible = "ti,lmx2594";
+							reg = <0x2>;
+							spi-max-frequency = <400000>;
+							num_bytes = <4>;
+							};
+					lmxA@3 {
+							compatible = "ti,lmx2594";
+							reg = <0x3>;
+							spi-max-frequency = <400000>;
+							num_bytes = <4>;
+							};
+				};
+		};
+
+		/* i2c@3 PS_DDR4_SODIMM; i2c@4 sfp3; i2c@5 sfp2; i2c@6 sfp1; i2c@7 sfp0 */
+	};
+
+
+};
+
+
+&psgtr {
+	/* nc, dp, usb3, sata */
+	clocks = <&si5341 0 0>, <&si5341 0 2>, <&si5341 0 3>;
+	clock-names = "ref1", "ref2", "ref3";
+};
+/* enable usb3 */
+&dwc3_0 {
+	dr_mode = "host";
+};
+
+
+
+
