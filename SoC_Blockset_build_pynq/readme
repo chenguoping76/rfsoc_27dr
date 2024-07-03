@@ -1,0 +1,2 @@
+演示使用pynq构架使用simulink 的soc blockset builder 生成的vivado 项目
+目标为在自定制的rfsoc27dr 平台上运行
