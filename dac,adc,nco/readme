@@ -1,1 +1,3 @@
-
+使用dma生成DAC数据，使用dma接收ADC数据
+问题：ADC的axi-stream没有tlast 结束信号
+接收数据与输入数据对应不上
