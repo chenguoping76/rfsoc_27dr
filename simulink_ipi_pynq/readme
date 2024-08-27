@@ -1,0 +1,2 @@
+演示使用simulink + hdlcoder 进行IP设计与pynq驱动案例
+注意：生成IP的axi4-lite 控制储存器应该使用uint16数据类型，如使用ufix16可能会无法使用MMIO读写
